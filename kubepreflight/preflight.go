@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"example.org/trust-boundary/deploycheck"
+	"github.com/EdwinJdevops/trust-boundary/deploycheck"
 )
 
 type Config struct {

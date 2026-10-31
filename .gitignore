@@ -1,0 +1,10 @@
+.DS_Store
+*.test
+coverage.out
+/bin/
+/evidence/
+*.key
+*.pem
+*token*
+!**/*_test.go
+*.kubeconfig

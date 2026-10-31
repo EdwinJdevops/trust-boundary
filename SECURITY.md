@@ -1,12 +1,33 @@
-# Security policy — experimental release
+# Security policy — experimental
 
-No code in this repository is approved to control production infrastructure.
-Report suspected vulnerabilities privately to the repository maintainer via GitHub private vulnerability reporting if enabled, or through a private contact channel published by the maintainer. Do not publish secrets, exploit chains, or customer data in public issues.
+No release is approved to control production infrastructure. There has been no
+external audit. Report vulnerabilities privately to the repository maintainer;
+use GitHub private vulnerability reporting only if it is enabled. Never put
+credentials, customer data or exploit details in public issues.
 
-## Trust boundaries
-The caller supplies the observed artifact digest; the library does not measure live Kubernetes state, prove workload identity, isolate hostile code, authenticate remote clients, or secure a deployment credential. A privileged attacker able to modify replay storage can defeat replay protection. The deployment validator accepts a limited subset of Kubernetes JSON; it is not a substitute for API admission or RBAC.
+The review scope includes signed authorization, replay safety, manifest ambiguity,
+TLS and credential handling, scope enforcement, cluster policy, journal recovery
+and bypass paths. Negative findings must be preserved even when a new layer is
+added. See [architecture and threat assumptions](docs/ARCHITECTURE.md).
 
-## Release requirements
-Before production consideration: independent identity attestation, dedicated executor identity, tightly scoped Kubernetes Role/RoleBinding, secure storage and key rotation, artifact digest confirmation from registry and live workload, server-side enforcement, external audit, failure injection, and adversarial multi-user tests.
+The trusted computing base includes the signer, protected executor OS identity,
+filesystem and parent directories, cluster administrator, API server, admission
+configuration, node kernel and the independent artifact measurement path. An
+untrusted caller must never receive an executor token, signing key, writable
+journal, host root or arbitrary code execution under the executor UID.
 
-Experiment 013 adds a Kubernetes server-side dry-run client. This is NOT production isolation or an enforcement proxy. The underlying Kubernetes identity must be protected; a token capable of dry-run create may be authorized for ordinary create. Do not expose this code as an Internet-facing service or use it to authorize production deployment without the missing protected-executor controls.
+The Go library does not establish those identities by itself. Its workload field
+is a signed assertion, not attestation. Dry-run uses the same Kubernetes create
+authorization as a real create. The in-process executor is not safe to expose as
+an unauthenticated remote API. Admission restricts shape but does not verify release
+signatures; stolen executor credentials remain a critical bypass risk.
+
+Historical archives are immutable research evidence, not supported deployment
+packages. In particular the Python same-UID adapter bypass, unverified Bubblewrap
+containment and local-only SQLite mock transaction limits remain documented.
+
+Production consideration requires independent signing and provenance verification,
+identity issuance, protected credential rotation/revocation, complete post-admission
+policy verification, network/kernel isolation, tamper-evident audit, durable
+operator recovery, failure injection and independent review. Passing unit tests or
+a disposable kind test does not establish those properties.

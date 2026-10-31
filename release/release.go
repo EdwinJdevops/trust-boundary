@@ -7,14 +7,23 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"example.org/trust-boundary/deploycheck"
-	"example.org/trust-boundary/gate"
+	"github.com/EdwinJdevops/trust-boundary/deploycheck"
+	"github.com/EdwinJdevops/trust-boundary/gate"
 	"time"
 )
 
 // CheckAndAuthorize verifies manifest bytes before consuming the single-use authorization.
 // trustedImageDigest must be measured independently by a trusted executor.
 func CheckAndAuthorize(envelope gate.Envelope, key ed25519.PublicKey, policy gate.Policy, manifest []byte, trustedImageDigest, replayDir string, now time.Time) (gate.Decision, error) {
+	if _, err := Verify(envelope, key, policy, manifest, trustedImageDigest, now); err != nil {
+		return gate.Decision{}, err
+	}
+	return gate.Authorize(envelope, key, policy, trustedImageDigest, replayDir, now)
+}
+
+// Verify binds the exact manifest and artifact to the signature without consuming
+// a grant. Only a protected executor with its own durable replay ledger may use it.
+func Verify(envelope gate.Envelope, key ed25519.PublicKey, policy gate.Policy, manifest []byte, trustedImageDigest string, now time.Time) (gate.Decision, error) {
 	if envelope.Intent.ManifestSHA256 == "" {
 		return gate.Decision{}, errors.New("signed manifest digest required")
 	}
@@ -25,5 +34,5 @@ func CheckAndAuthorize(envelope gate.Envelope, key ed25519.PublicKey, policy gat
 	if err := deploycheck.Check(manifest, envelope.Intent.Environment, trustedImageDigest); err != nil {
 		return gate.Decision{}, err
 	}
-	return gate.Authorize(envelope, key, policy, trustedImageDigest, replayDir, now)
+	return gate.Verify(envelope, key, policy, trustedImageDigest, now)
 }

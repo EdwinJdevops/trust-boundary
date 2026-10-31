@@ -11,11 +11,13 @@ func TestAmbiguousJSONDenied(t *testing.T) {
 	delete(pod(m), "runAsUser")
 	b := render(m)
 	cases := map[string][]byte{
-		"duplicate root key":   append([]byte(`{"kind":"Other",`), b[1:]...),
-		"duplicate nested key": bytes.Replace(b, []byte(`"namespace":"staging"`), []byte(`"namespace":"production","namespace":"staging"`), 1),
-		"second document":      append(append([]byte{}, b...), b...),
-		"oversized document":   []byte(strings.Repeat(" ", 1<<20+1)),
-		"malformed document":   []byte(`{"kind":`),
+		"duplicate root key":     append([]byte(`{"kind":"Other",`), b[1:]...),
+		"case alias":             bytes.Replace(b, []byte(`"kind"`), []byte(`"Kind"`), 1),
+		"case aliased duplicate": append([]byte(`{"Kind":"Other",`), b[1:]...),
+		"duplicate nested key":   bytes.Replace(b, []byte(`"namespace":"staging"`), []byte(`"namespace":"production","namespace":"staging"`), 1),
+		"second document":        append(append([]byte{}, b...), b...),
+		"oversized document":     []byte(strings.Repeat(" ", 1<<20+1)),
+		"malformed document":     []byte(`{"kind":`),
 	}
 	for name, doc := range cases {
 		t.Run(name, func(t *testing.T) {

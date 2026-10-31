@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -133,6 +134,9 @@ func Check(data []byte, namespace, expectedDigest string) error {
 	if err := rejectDuplicateKeys(data); err != nil {
 		return err
 	}
+	if err := exactFields(data, reflect.TypeOf(Deployment{})); err != nil {
+		return err
+	}
 	var d Deployment
 	dec := json.NewDecoder(strings.NewReader(string(data)))
 	dec.DisallowUnknownFields()
@@ -178,6 +182,50 @@ func Check(data []byte, namespace, expectedDigest string) error {
 	for k, v := range d.Spec.Selector.MatchLabels {
 		if d.Spec.Template.Metadata.Labels[k] != v {
 			return errors.New("selector mismatch")
+		}
+	}
+	return nil
+}
+
+// encoding/json matches struct keys case-insensitively. Kubernetes field names
+// are case-sensitive: reject alternate spellings rather than interpret a manifest
+// differently from the API server. Free-form label maps retain their own casing.
+func exactFields(data []byte, typ reflect.Type) error {
+	if typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	switch typ.Kind() {
+	case reflect.Struct:
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(data, &obj); err != nil {
+			return err
+		}
+		fields := make(map[string]reflect.Type)
+		for i := 0; i < typ.NumField(); i++ {
+			f := typ.Field(i)
+			fields[strings.Split(f.Tag.Get("json"), ",")[0]] = f.Type
+		}
+		for k, v := range obj {
+			field, ok := fields[k]
+			if !ok {
+				return fmt.Errorf("unsupported exact JSON field %q", k)
+			}
+			if err := exactFields(v, field); err != nil {
+				return err
+			}
+		}
+	case reflect.Slice:
+		if typ == reflect.TypeOf(json.RawMessage{}) {
+			return nil
+		}
+		var values []json.RawMessage
+		if err := json.Unmarshal(data, &values); err != nil {
+			return err
+		}
+		for _, v := range values {
+			if err := exactFields(v, typ.Elem()); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

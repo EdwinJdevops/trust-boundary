@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"example.org/trust-boundary/gate"
+	"github.com/EdwinJdevops/trust-boundary/gate"
 	"os"
 	"path/filepath"
 	"strings"

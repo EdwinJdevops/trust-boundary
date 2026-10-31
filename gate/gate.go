@@ -80,6 +80,17 @@ func validate(i Intent) error {
 // Authorize checks a caller-supplied observed digest. The trusted executor MUST supply it, not the untrusted workload.
 // Replay files make grants single use locally; this is not a distributed transaction or execution receipt.
 func Authorize(env Envelope, public ed25519.PublicKey, policy Policy, observedDigest, replayDir string, now time.Time) (Decision, error) {
+	decision, err := Verify(env, public, policy, observedDigest, now)
+	if err != nil {
+		return Decision{}, err
+	}
+	i := env.Intent
+	return consume(i, decision, replayDir)
+}
+
+// Verify checks signature, time, artifact and scope without consuming a grant.
+// It grants no execution authority without a protected durable replay ledger.
+func Verify(env Envelope, public ed25519.PublicKey, policy Policy, observedDigest string, now time.Time) (Decision, error) {
 	i := env.Intent
 	if err := validate(i); err != nil {
 		return Decision{}, err
@@ -101,6 +112,11 @@ func Authorize(env Envelope, public ed25519.PublicKey, policy Policy, observedDi
 	if i.Issuer != policy.Issuer || i.Workload != policy.Workload || i.Environment != policy.Environment || i.Operation != policy.Operation {
 		return Decision{}, errors.New("policy denied")
 	}
+	sum := sha256.Sum256(canonical(i))
+	return Decision{IntentSHA256: hex.EncodeToString(sum[:]), ArtifactSHA256: i.ArtifactSHA256, Operation: i.Operation, Workload: i.Workload, Environment: i.Environment}, nil
+}
+
+func consume(i Intent, decision Decision, replayDir string) (Decision, error) {
 	if replayDir == "" {
 		return Decision{}, errors.New("missing replay directory")
 	}
@@ -136,5 +152,5 @@ func Authorize(env Envelope, public ed25519.PublicKey, policy Policy, observedDi
 	if syncErr != nil || closeErr != nil {
 		return Decision{}, errors.New("replay directory durability failed; deny and inspect")
 	}
-	return Decision{IntentSHA256: hex.EncodeToString(sum[:]), ArtifactSHA256: i.ArtifactSHA256, Operation: i.Operation, Workload: i.Workload, Environment: i.Environment}, nil
+	return decision, nil
 }

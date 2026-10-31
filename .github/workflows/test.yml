@@ -2,19 +2,40 @@ name: Go verification
 on:
   push:
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ['1.26.x', '1.27.x']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          go-version-file: go.mod
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache: false
+      - name: Verify historical archive integrity
+        run: |
+          sed 's#history/#docs/history/archives/#' docs/history/HISTORY_SHA256SUMS.txt | sha256sum -c -
       - name: Format
-        run: test -z "$(gofmt -l $(find . -name '*.go'))"
+        run: test -z "$(gofmt -l $(git ls-files '*.go'))"
+      - name: Build
+        run: go build ./...
       - name: Static analysis
         run: go vet ./...
-      - name: Race tests
-        run: go test -race -count=1 ./...
+      - name: Race and adversarial tests
+        run: go test -race -count=1 -coverprofile=coverage.out ./...
+      - name: Integration test compilation
+        run: go test -c -tags integration -o /tmp/tb-integration.test ./kubeexecutor
+      - name: Shell syntax
+        run: bash -n scripts/integration.sh

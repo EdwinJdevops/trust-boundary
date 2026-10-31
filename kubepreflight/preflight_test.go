@@ -2,8 +2,16 @@ package kubepreflight
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"fmt"
+	"math/big"
+	"sync/atomic"
+	"time"
 
 	"net/http"
 	"net/http/httptest"
@@ -97,17 +105,34 @@ func TestRejectErrorAndUnexpectedResponse(t *testing.T) {
 	}
 }
 func TestRejectDifferentTLSCertificate(t *testing.T) {
-	trusted := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	defer trusted.Close()
-	untrusted := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(201) }))
+	// httptest servers share a default certificate. Generate an unrelated trust
+	// root so a malformed response cannot masquerade as certificate rejection.
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ca := &x509.Certificate{SerialNumber: big.NewInt(100), Subject: pkix.Name{CommonName: "unrelated test root"}, NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour), IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign}
+	der, err := x509.CreateCertificate(rand.Reader, ca, ca, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var calls atomic.Int32
+	untrusted := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.WriteHeader(201)
+		_, _ = w.Write([]byte(`{"kind":"Deployment","apiVersion":"apps/v1","metadata":{"name":"app","namespace":"staging"}}`))
+	}))
 	defer untrusted.Close()
 	f := filepath.Join(t.TempDir(), "token")
 	_ = os.WriteFile(f, []byte("test"), 0600)
-	c, err := New(Config{ServerURL: untrusted.URL, CABundlePEM: pemCert(trusted.Certificate().Raw), BearerTokenFile: f})
+	c, err := New(Config{ServerURL: untrusted.URL, CABundlePEM: pemCert(der), BearerTokenFile: f})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := c.DryRunCreate(context.Background(), valid(), "staging", hash); err == nil {
 		t.Fatal("untrusted TLS accepted")
+	}
+	if calls.Load() != 0 {
+		t.Fatal("credential-bearing HTTP request reached untrusted server")
 	}
 }

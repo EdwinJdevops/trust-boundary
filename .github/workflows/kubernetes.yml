@@ -1,0 +1,26 @@
+name: Disposable Kubernetes enforcement
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kubernetes-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.27.x'
+          cache: false
+      - name: Verify local Docker and kubectl availability
+        run: |
+          docker info --format '{{.ServerVersion}}'
+          kubectl version --client
+      - name: Test actual credentials, RBAC, signed creation and recovery
+        run: sudo env "PATH=$PATH" bash scripts/integration.sh
