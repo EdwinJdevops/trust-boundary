@@ -1,0 +1,21 @@
+go version go1.26.8 linux/amd64
+ok  	github.com/EdwinJdevops/trust-boundary/artifact	1.015s	coverage: 77.8% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/deploycheck	1.081s	coverage: 83.7% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/gate	1.085s	coverage: 80.3% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/kubeexecutor	1.202s	coverage: 75.9% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/kubepreflight	1.133s	coverage: 76.6% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/release	1.036s	coverage: 100.0% of statements
+docs/history/archives/trust-boundary-experiment-v002.zip: OK
+docs/history/archives/trust-boundary-experiment-v003.zip: OK
+docs/history/archives/trust-boundary-experiment-v004.zip: OK
+docs/history/archives/trust-boundary-experiment-v005.zip: OK
+docs/history/archives/trust-boundary-experiment-v006.zip: OK
+docs/history/archives/trust-boundary-experiment-v007.zip: OK
+docs/history/archives/trust-boundary-experiment-v008.zip: OK
+docs/history/archives/trust-boundary-experiment-v009.zip: OK
+docs/history/archives/trust-boundary-experiment.zip: OK
+docs/history/archives/trust-boundary-go-v011.zip: OK
+docs/history/archives/trust-boundary-go-v012.zip: OK
+docs/history/archives/trust-boundary-go-v013.zip: OK
+docs/history/archives/trust-boundary-release-research-v010.zip: OK
+PASS: final Linux format, build, vet, race, integration compilation, shell syntax and historical archive integrity

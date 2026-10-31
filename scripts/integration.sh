@@ -21,8 +21,8 @@ cp "$(command -v kubectl)" "$run/kubectl"
 chmod 755 "$run/kubectl"
 export KUBECONFIG="$run/admin.kubeconfig"
 kind_version=v0.33.0
-curl -fsSL "https://github.com/kubernetes-sigs/kind/releases/download/$kind_version/kind-linux-amd64" -o "$run/kind"
-expected=$(curl -fsSL "https://github.com/kubernetes-sigs/kind/releases/download/$kind_version/kind-linux-amd64.sha256sum" | awk '{print $1}')
+curl --connect-timeout 15 --max-time 120 --retry 2 -fsSL "https://github.com/kubernetes-sigs/kind/releases/download/$kind_version/kind-linux-amd64" -o "$run/kind"
+expected=$(curl --connect-timeout 15 --max-time 120 --retry 2 -fsSL "https://github.com/kubernetes-sigs/kind/releases/download/$kind_version/kind-linux-amd64.sha256sum" | awk '{print $1}')
 printf '%s  %s\n' "$expected" "$run/kind" | sha256sum -c -
 chmod 755 "$run/kind"
 created=1
@@ -86,7 +86,7 @@ if ! grep -q trust-boundary-experiment "$run/admission-denied"; then cat "$run/a
 echo 'PASS: actual executor token cannot bypass cluster workload-shape policy'
 # Measure exact OCI registry manifest/index response bytes; this is integrity,
 # not a publisher signature or build provenance assertion.
-curl -fsSL -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
+curl --connect-timeout 15 --max-time 120 --retry 2 -fsSL -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
   https://registry.k8s.io/v2/pause/manifests/3.10.1 -o "$run/artifact.json"
 chmod 444 "$run/artifact.json"
 cd "$repo"
