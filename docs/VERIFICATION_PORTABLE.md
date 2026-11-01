@@ -1,5 +1,8 @@
 # Portable verification record — 2026-11-01
 
+This records the earlier portable-verifier milestone. For the later admitted-state
+and signed-journal implementation, see [the subsequent verification record](VERIFICATION_ADMITTED.md).
+
 Tested implementation: `0aef0e7dc5c17c205c641ab13606a934f526cc4e` in
 https://github.com/EdwinJdevops/trust-boundary .
 

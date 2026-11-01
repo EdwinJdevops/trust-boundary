@@ -11,8 +11,7 @@ The input manifest must first pass the existing strict validator and exact-byte
 release signature binding. Observed JSON rejects duplicate keys. Comparisons
 preserve integer spellings rather than rounding through floating-point values.
 Fractional or exponent aliases are rejected for supported integer defaults.
-Comparisons
-retain all workload fields except explicitly enumerated API defaults:
+The comparison retains all workload fields except explicitly enumerated API defaults:
 
 | Location | Accepted default |
 | --- | --- |

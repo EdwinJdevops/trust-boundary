@@ -38,6 +38,10 @@ no independent validators are enrolled and this is not yet a deployment gate.
 
 ## Verification
 
+The [2026-11-01 admitted-state verification record](docs/VERIFICATION_ADMITTED.md)
+contains the exact tested commit, passing hosted CI, real cluster results and
+hash-bound local evidence. Earlier records remain historical evidence.
+
 ```sh
 go build ./...
 go vet ./...
@@ -68,8 +72,9 @@ assumptions derived from these commands or workflow files.
 The executor API is trusted in-process code, not an authenticated public service.
 A stolen executor token can bypass its signature gate. The journal assumes private
 local Linux storage and trusted installation/parent directories. Recovery observes
-matching cluster state; it does not prove causal ownership of a pre-existing object,
-attest all admitted fields or provide automatic rollback/exactly-once deployment.
+matching supported Deployment state; it does not prove causal ownership of a
+pre-existing object, attest resulting Pods or provide automatic rollback/exactly-once
+deployment. Post-create mismatch detection cannot undo an accepted mutation.
 
 Independent signing, provenance verification, workload attestation, kernel and
 network containment, key revocation/rotation, remote tamper-evident audit,

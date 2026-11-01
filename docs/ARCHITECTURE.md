@@ -55,9 +55,10 @@ plane administrators, node root and privileged local users remain trusted.
 - Real sandbox containment, default-deny networking, syscall confinement and
   resistance to kernel/container escapes are unverified. Kind's network does not
   establish production network isolation.
-- Observing the Deployment image is not attesting all admitted fields, running
-  bytes or artifact provenance. Admission mutation and privileged cluster actors
-  can change state. Pod imageID evidence is separately printed by the supervisor.
+- The supported Deployment profile is compared after creation and during recovery.
+  This does not prevent an already accepted mutation or attest resulting Pods,
+  running bytes or artifact provenance. Privileged cluster actors can change state.
+  Pod imageID evidence is separately printed by the supervisor.
 - No key rotation, revocation, approval quorum, tamper-evident remote audit, HA or
   distributed replay protocol. Private local Linux storage is required; no NFS.
   Parent-directory substitution/ownership must be prevented by trusted installation.
@@ -65,7 +66,7 @@ plane administrators, node root and privileged local users remain trusted.
   readiness, external audit or proof of safety for arbitrary forks is claimed.
 
 Next gates: signed builder provenance verification, protected independent signer
-and identity issuance, post-admission full-policy verification, adversarial CNI
+and identity issuance, resulting-Pod and continuous policy verification, adversarial CNI
 network tests, subprocess-kill/power-loss failure injection and an authenticated
 operator recovery protocol. Multi-cloud targets remain intended integrations,
 not tested AWS/Azure/GCP accounts.
