@@ -1,6 +1,7 @@
 package deploycheck
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"reflect"
@@ -22,7 +23,12 @@ func CheckObserved(requested, observed []byte, namespace, expectedDigest string)
 		return err
 	}
 	var want, got map[string]any
-	if json.Unmarshal(requested, &want) != nil || json.Unmarshal(observed, &got) != nil || got == nil {
+	decode := func(data []byte, out *map[string]any) error {
+		d := json.NewDecoder(bytes.NewReader(data))
+		d.UseNumber()
+		return d.Decode(out)
+	}
+	if decode(requested, &want) != nil || decode(observed, &got) != nil || got == nil {
 		return errors.New("invalid admitted Deployment")
 	}
 	if err := normalizeObserved(got); err != nil {
@@ -145,7 +151,7 @@ func normalizeObserved(d map[string]any) error {
 	if err != nil {
 		return err
 	}
-	for k, v := range map[string]any{"progressDeadlineSeconds": float64(600), "revisionHistoryLimit": float64(10), "minReadySeconds": float64(0), "paused": false} {
+	for k, v := range map[string]any{"progressDeadlineSeconds": json.Number("600"), "revisionHistoryLimit": json.Number("10"), "minReadySeconds": json.Number("0"), "paused": false} {
 		if err = defaultField(spec, k, v); err != nil {
 			return err
 		}
@@ -172,7 +178,7 @@ func normalizeObserved(d map[string]any) error {
 	if err != nil {
 		return err
 	}
-	for k, v := range map[string]any{"restartPolicy": "Always", "terminationGracePeriodSeconds": float64(30), "dnsPolicy": "ClusterFirst", "schedulerName": "default-scheduler", "serviceAccountName": "default", "serviceAccount": "default", "enableServiceLinks": true, "preemptionPolicy": "PreemptLowerPriority"} {
+	for k, v := range map[string]any{"restartPolicy": "Always", "terminationGracePeriodSeconds": json.Number("30"), "dnsPolicy": "ClusterFirst", "schedulerName": "default-scheduler", "serviceAccountName": "default", "serviceAccount": "default", "enableServiceLinks": true, "preemptionPolicy": "PreemptLowerPriority"} {
 		if err = defaultField(pod, k, v); err != nil {
 			return err
 		}

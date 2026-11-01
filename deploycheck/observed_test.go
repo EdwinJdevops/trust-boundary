@@ -1,9 +1,30 @@
 package deploycheck
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 )
+
+func TestObservedNumericPrecisionAndDuplicates(t *testing.T) {
+	request, m := admittedFixture()
+	body := render(m)
+	for name, bad := range map[string][]byte{
+		"fraction rounded to one": bytes.Replace(body, []byte(`"replicas":1`), []byte(`"replicas":1.0000000000000001`), 1),
+		"rounded API default":     bytes.Replace(body, []byte(`"progressDeadlineSeconds":600`), []byte(`"progressDeadlineSeconds":600.00000000000001`), 1),
+		"exponent alias":          bytes.Replace(body, []byte(`"progressDeadlineSeconds":600`), []byte(`"progressDeadlineSeconds":6e2`), 1),
+		"duplicate root":          append([]byte(`{"kind":"Other",`), body[1:]...),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if bytes.Equal(body, bad) {
+				t.Fatal("fixture did not change")
+			}
+			if err := CheckObserved(request, bad, "staging", hash); err == nil {
+				t.Fatal("ambiguous numeric or duplicate response accepted")
+			}
+		})
+	}
+}
 
 func admittedFixture() ([]byte, map[string]any) {
 	m := valid()

@@ -3,7 +3,7 @@
 # Tests are arbitrary code: this is UID separation, not a hardened sandbox.
 set -euo pipefail
 umask 077
-[[ $(id -u) == 0 && $(uname -m) == x86_64 ]] || { echo 'Linux amd64 root supervisor required for the separate-UID cluster test'; exit 1; }
+[[ $(id -u) == 0 && $(uname -s) == Linux && $(uname -m) == x86_64 ]] || { echo 'Linux amd64 root supervisor required for the separate-UID cluster test'; exit 1; }
 [[ $# == 2 && $1 =~ ^[a-f0-9]{40}$ ]] || { echo 'usage: verify-commit.sh FULL_COMMIT NEW_OUTPUT_DIRECTORY'; exit 1; }
 expected=$1
 output=$2
@@ -51,12 +51,12 @@ chmod -R a+rX,go-w "$work/source"
     cmd/tbverify/main.go evidence/evidence.go
 ) > "$output/suite.sha256"
 started=$(date +%s)
-goversion=$($go_bin version)
+goversion=$(env -i PATH="$safe_path" HOME="$work/supervisor" GOENV=off GOTOOLCHAIN=local GOWORK=off "$go_bin" version)
 {
   printf 'go: %s\n' "$goversion"
   git --version
-  "$work/kubectl" version --client
-  docker info --format 'docker: {{.ServerVersion}}'
+  env -i PATH="$safe_path" HOME="$work/supervisor" "$work/kubectl" version --client
+  timeout 30 env -i PATH="$safe_path" HOME="$work/supervisor" docker info --format 'docker: {{.ServerVersion}}'
   uname -sr
 } > "$output/logs/environment.log" 2>&1
 worker() {
@@ -97,19 +97,19 @@ check kubernetes timeout 1200 env -i PATH="$work:$safe_path" HOME="$work/supervi
   GOCACHE="$work/supervisor/cache" GOMODCACHE="$work/supervisor/modules" GOPATH="$work/supervisor/gopath" \
   GOENV=off GOTOOLCHAIN=local GOWORK=off GOPROXY=off GOSUMDB=off \
   bash "$work/source/scripts/integration.sh"
-finished=$(date +%s)
 cp "$work/worker/coverage.out" "$output/coverage.out"
 # Use a supervisor-built recorder from the reviewed source, not an executable
 # potentially modified by worker tests. No private key is present in this stage.
-env -i PATH="$safe_path" HOME="$work/supervisor" GOCACHE="$work/supervisor/cache" \
+timeout 600 env -i PATH="$safe_path" HOME="$work/supervisor" GOCACHE="$work/supervisor/cache" \
   GOENV=off GOTOOLCHAIN=local GOWORK=off GOPROXY=off GOSUMDB=off \
   "$go_bin" build -trimpath -buildvcs=false -o "$work/recorder" ./cmd/tbverify
 [[ $(sha256sum "$work/recorder" | cut -d' ' -f1) == $(sha256sum "$output/tbverify" | cut -d' ' -f1) ]] || { echo 'worker artifact differs from supervisor rebuild'; exit 1; }
-"$work/recorder" record --commit "$expected" --source "$output/source.tar" \
+finished=$(date +%s)
+timeout 120 "$work/recorder" record --commit "$expected" --source "$output/source.tar" \
   --artifact "$output/tbverify" --suite "$output/suite.sha256" --logs "$output/logs" \
   --go-version "$goversion" --started-at "$started" --finished-at "$finished" \
   "${statuses[@]}" > "$output/statement.json"
-"$work/recorder" inspect --statement "$output/statement.json" --logs "$output/logs" \
+timeout 120 "$work/recorder" inspect --statement "$output/statement.json" --logs "$output/logs" \
   --source "$output/source.tar" --artifact "$output/tbverify" --suite "$output/suite.sha256" > "$output/integrity.json"
 printf '{"status":"passed","authentication":"not-verified","commit":"%s"}\n' "$expected" > "$output/outcome.json"
 echo 'PASS: complete commit-bound local validation; evidence is unsigned and not independently authenticated'
