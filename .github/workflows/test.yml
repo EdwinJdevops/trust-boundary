@@ -38,4 +38,6 @@ jobs:
       - name: Integration test compilation
         run: go test -c -tags integration -o /tmp/tb-integration.test ./kubeexecutor
       - name: Shell syntax
-        run: bash -n scripts/integration.sh
+        run: |
+          bash -n scripts/integration.sh
+          bash -n scripts/verify-commit.sh

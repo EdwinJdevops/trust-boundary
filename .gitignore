@@ -2,7 +2,7 @@
 *.test
 coverage.out
 /bin/
-/evidence/
+/validation-output/
 *.key
 *.pem
 *token*

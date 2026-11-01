@@ -30,6 +30,11 @@ owner's explicit choice.
 See [architecture and unresolved risks](docs/ARCHITECTURE.md),
 [security policy](SECURITY.md), and [contribution/test instructions](CONTRIBUTING.md).
 
+The [portable validation runner](docs/PORTABLE_VALIDATION.md) runs the full suite
+against a clean exact commit and emits hash-bound, explicitly unsigned evidence.
+The evidence verifier supports externally configured two-key attestation quorums;
+no independent validators are enrolled and this is not yet a deployment gate.
+
 ## Verification
 
 ```sh

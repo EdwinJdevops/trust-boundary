@@ -14,6 +14,8 @@ cleanup() {
   [[ $run == /tmp/trust-boundary-integration.* ]] && rm -rf -- "$run"
 }
 trap cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 chmod 755 "$run"
 # Reuse the installed client while making its executable accessible to both test
 # UIDs; a developer's private home directory must not affect API-denial evidence.

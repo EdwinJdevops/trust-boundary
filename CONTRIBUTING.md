@@ -18,3 +18,7 @@ Do not weaken fail-closed replay permissions to make Windows tests pass. Windows
 builds are useful compile checks, not Linux durability or isolation evidence.
 Record exact source revision, tool versions, commands, failures and limitations
 when reporting test results. CI passing is not an external security audit.
+
+For a complete commit-bound run and independently inspectable evidence, use
+`scripts/verify-commit.sh` as described in [portable validation](docs/PORTABLE_VALIDATION.md).
+Never turn local unsigned results into a claim of independent review.
