@@ -1,0 +1,58 @@
+check=kubernetes commit=0aef0e7dc5c17c205c641ab13606a934f526cc4e
+/tmp/trust-boundary-integration.OgahsS0p/kind: OK
+Creating cluster "tb-test-ogahss0p" ...
+ • Ensuring node image (kindest/node:v1.35.8) 🖼️  ...
+ ✓ Ensuring node image (kindest/node:v1.35.8) 🖼️
+ • Preparing nodes 📦   ...
+ ✓ Preparing nodes 📦 
+ • Writing configuration 📜  ...
+ ✓ Writing configuration 📜
+ • Starting control-plane 🕹️  ...
+ ✓ Starting control-plane 🕹️
+ • Installing CNI 🔌  ...
+ ✓ Installing CNI 🔌
+ • Installing StorageClass 💾  ...
+ ✓ Installing StorageClass 💾
+ • Waiting ≤ 3m0s for control-plane = Ready ⏳  ...
+ ✓ Waiting ≤ 3m0s for control-plane = Ready ⏳
+ • Ready after 18s 💚
+Set kubectl context to "kind-tb-test-ogahss0p"
+You can now use your cluster with:
+
+kubectl cluster-info --context kind-tb-test-ogahss0p --kubeconfig /tmp/trust-boundary-integration.OgahsS0p/admin.kubeconfig
+
+Have a nice day! 👋
+namespace/tb-control created
+namespace/tb-caller created
+namespace/staging created
+serviceaccount/executor created
+serviceaccount/caller created
+role.rbac.authorization.k8s.io/deployment-create created
+rolebinding.rbac.authorization.k8s.io/protected-executor created
+validatingadmissionpolicy.admissionregistration.k8s.io/trust-boundary-experiment created
+validatingadmissionpolicybinding.admissionregistration.k8s.io/trust-boundary-experiment created
+ATTRIBUTE                                           VALUE
+Username                                            system:serviceaccount:tb-caller:caller
+UID                                                 234c8a5b-b945-446c-becf-7d9b1df80761
+Groups                                              [system:serviceaccounts system:serviceaccounts:tb-caller system:authenticated]
+Extra: authentication.kubernetes.io/credential-id   [JTI=cd0b45f7-dc5c-417e-bafc-c94c420e868a]
+PASS: separate Unix UID cannot read executor token
+PASS: direct caller mutation rejected with Forbidden
+ATTRIBUTE                                           VALUE
+Username                                            system:serviceaccount:tb-control:executor
+UID                                                 dba147bb-64bc-4533-8c16-aaa80e070c64
+Groups                                              [system:serviceaccounts system:serviceaccounts:tb-control system:authenticated]
+Extra: authentication.kubernetes.io/credential-id   [JTI=69506d4d-2de0-4727-ab64-b584531cd25e]
+PASS: actual executor token cannot bypass cluster workload-shape policy
+=== RUN   TestRealKubernetes
+    integration_test.go:76: real Deployment UID=678e21a8-231f-4e95-8bee-2012aa2fb77b resourceVersion=637 image=registry.k8s.io/pause@sha256:278fb9dbcca9518083ad1e11276933a2e96f23de604a3a08cc3c80002767d24c; replay denied; read-only restart recovery verified
+--- PASS: TestRealKubernetes (0.11s)
+PASS
+Waiting for deployment "app" rollout to finish: 0 out of 1 new replicas have been updated...
+Waiting for deployment "app" rollout to finish: 0 of 1 updated replicas are available...
+deployment "app" successfully rolled out
+4f4ef32c-1a18-4275-9efa-db365356d42b registry.k8s.io/pause@sha256:278fb9dbcca9518083ad1e11276933a2e96f23de604a3a08cc3c80002767d24c
+PASS: executor cannot read secrets, mutate RBAC, exec into Pods or create outside staging
+PASS: disposable cluster test complete; teardown follows
+Deleting cluster "tb-test-ogahss0p" ...
+Deleted nodes: ["tb-test-ogahss0p-control-plane"]

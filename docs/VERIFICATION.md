@@ -1,5 +1,8 @@
 # Verification record — 2026-10-31
 
+Historical record. Hosted CI later executed successfully; see the
+[2026-11-01 portable-validation record](VERIFICATION_PORTABLE.md).
+
 Repository: https://github.com/EdwinJdevops/trust-boundary (private, main).
 
 ## Source provenance

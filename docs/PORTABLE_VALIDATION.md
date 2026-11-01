@@ -1,6 +1,6 @@
 # Portable validation and evidence
 
-This is an experimental alternative execution path while hosted CI is unavailable.
+This is an experimental alternative execution path during hosted CI outages.
 It preserves the full local suite, including the real disposable Kubernetes test.
 It does not replace repository branch protection, independent human review or an
 independent validator. It does not authorize a deployment.
@@ -95,7 +95,9 @@ Enroll independently controlled validators, define revocation/key rotation and
 approved toolchains, protect signing outside test execution, bind source and
 artifact expectations to approved releases, then enforce authenticated evidence in
 the executor without an optional bypass. Test that path against real credentials.
-Branch protection and hosted CI billing remain separate unresolved account gates.
+Branch protection remains an unresolved account gate. Hosted CI executed and
+passed on 2026-11-01 for commit 0aef0e7; the earlier billing-related refusals remain
+historical evidence, not the current CI status. No billing settings were changed.
 
 Design reference: [SLSA artifact verification](https://slsa.dev/spec/v1.2/verifying-artifacts)
 requires configured trust roots and artifact/policy matching; the present work
