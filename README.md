@@ -41,6 +41,8 @@ no independent validators are enrolled and this is not yet a deployment gate.
 The [2026-11-01 admitted-state verification record](docs/VERIFICATION_ADMITTED.md)
 contains the exact tested commit, passing hosted CI, real cluster results and
 hash-bound local evidence. Earlier records remain historical evidence.
+The [release acceptance gates](docs/RELEASE_GATES.md) define the developer-preview
+scope, operational recovery constraints and evidence still required for production.
 
 ```sh
 go build ./...

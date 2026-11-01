@@ -99,7 +99,25 @@ setpriv --reuid 21001 --regid 21001 --clear-groups env \
   TB_TOKEN="$run/executor/token" TB_JOURNAL="$run/executor" TB_ARTIFACT="$run/artifact.json" \
   "$run/integration.test" -test.v -test.run '^TestRealKubernetes$'
 kubectl -n staging rollout status deployment/app --timeout=120s
-kubectl -n staging get pods -l app=app -o jsonpath='{range .items[*]}{.metadata.uid}{" "}{.status.containerStatuses[0].imageID}{"\n"}{end}'
+# Printing an imageID is not a verification gate. Require exactly the expected
+# fresh running Pod/container and compare the runtime-reported digest with the
+# independently measured registry response bytes used by the release fixture.
+expected_image="registry.k8s.io/pause@sha256:$(sha256sum "$run/artifact.json" | cut -d' ' -f1)"
+observed=$(kubectl -n staging get pods -l app=app -o go-template='{{len .items}}{{"\n"}}{{range .items}}{{.metadata.uid}} {{.status.phase}} {{if .metadata.deletionTimestamp}}terminating{{else}}active{{end}} {{len .status.containerStatuses}}{{range .status.containerStatuses}} {{.ready}} {{.imageID}}{{end}}{{"\n"}}{{end}}')
+check_running_pod() {
+  local expected=$1 pod_uid phase lifecycle containers ready image_id extra
+  local -a rows
+  mapfile -t rows <<< "$observed"
+  [[ ${#rows[@]} == 2 && ${rows[0]} == 1 ]] || return 1
+  read -r pod_uid phase lifecycle containers ready image_id extra <<< "${rows[1]}"
+  [[ -n $pod_uid && $phase == Running && $lifecycle == active && $containers == 1 && $ready == true && $image_id == "$expected" && -z $extra ]]
+}
+check_running_pod "$expected_image" || { echo 'FAIL: running Pod identity/readiness/image differs from authorized fixture'; exit 1; }
+# Exercise this gate's negative path against the same actual runtime observation.
+if check_running_pod 'registry.k8s.io/pause@sha256:0000000000000000000000000000000000000000000000000000000000000000'; then
+  echo 'FAIL: rollout image gate accepted an unrelated artifact'; exit 1
+fi
+printf 'PASS: running Pod matches measured artifact; one ready container; unrelated digest rejected\n%s\n' "$observed"
 # Verify that RBAC denies credentials, RBAC mutation and cross-namespace writes.
 for check in 'get secrets -n staging' 'create roles -n staging' 'create deployments -n default' 'create pods/exec -n staging'; do
   read -r -a args <<< "$check"
