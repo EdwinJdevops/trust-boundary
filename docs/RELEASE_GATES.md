@@ -18,7 +18,7 @@ Public source, passing CI and an attractive announcement do not change the trust
 | Admitted configuration | Supported Deployment comparison, UID replacement and mutation rejection tests | Resulting-Pod and continuous verification; prevent unsafe admission before persistence |
 | Artifact integrity | Exact registry-response measurement and digest-pinned manifest | Publisher identity and approved builder provenance |
 | Validation approval | Portable unsigned bundle; quorum verification with temporary test keys | Independently controlled validators and mandatory evidence enforcement in executor |
-| Recovery | Exclusive signed journal; GET-only recovery; incomplete/altered journal denial | Process-crash test receipts, power-loss/disk failure injection, operator protocol |
+| Recovery | Exclusive signed journal; GET-only recovery; incomplete/altered journal denial; controlled SIGKILL tests | Power-loss/disk failure injection, operator protocol |
 | Repository integrity | Pinned actions, read-only CI, archive checksums | Enforced protected review path and publication/history review |
 | Runtime containment | Restricted workload fixture | Tested network/kernel boundaries, independent security review |
 
@@ -26,7 +26,8 @@ Verification reports record exact revisions and executed results. A configured t
 or an unexecuted test is not evidence. The process-crash test adds controlled SIGKILL
 of a real child executor at an unacknowledged POST against a synthetic TLS API,
 covering both missing and persisted observations. It must pass before its receipts
-can be cited; it is not a real API-server crash or power-loss simulation.
+can be cited; the [executed results](VERIFICATION_CRASH.md) record that pass. It is
+not a real API-server crash or power-loss simulation.
 
 ## Handling uncertain creation
 
