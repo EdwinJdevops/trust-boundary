@@ -17,13 +17,16 @@ created local journal file, syncs both file and directory, rechecks expiry, and
 sends one create request. Concurrent replay loses exclusive creation. A truncated
 record blocks further mutation and requires operator inspection.
 
-Recovery only GETs the previously named Deployment and compares namespace, API
-kind, image reference, nonempty UID and resourceVersion. It never repeats POST.
+Recovery only GETs the previously named Deployment and checks the supported
+admitted workload configuration, nonempty UID and resourceVersion. Immediate
+create/readback must also retain the same UID. It never repeats POST.
 An absent/conflicting object, expired request before POST or disk failure may leave
 an unrecoverable operation requiring trusted investigation and a new signed grant.
 There is no exactly-once or automated rollback claim. A matching pre-existing
-Deployment is an observation, not proof this operation created it. Recovery does
-not authenticate journal contents against a privileged filesystem attacker.
+Deployment is an observation, not proof this operation created it. Version-2
+journals reverify their stored signed request before GET; root and replay-store
+tampering remain outside the defended boundary. Legacy unsigned records are denied.
+See [the admitted-state and journal contract](ADMITTED_STATE.md).
 
 `artifact.Measure` hashes real bytes with bounded input. It does not verify SLSA,
 Sigstore, publisher identity, source correspondence or the safety of those bytes.

@@ -39,9 +39,12 @@ type Executor struct {
 	origin string
 }
 type Record struct {
-	Decision gate.Decision `json:"decision"`
-	Manifest []byte        `json:"manifest"`
-	Name     string        `json:"name"`
+	Version      int           `json:"version"`
+	Envelope     gate.Envelope `json:"envelope"`
+	AuthorizedAt int64         `json:"authorized_at"`
+	Decision     gate.Decision `json:"decision"`
+	Manifest     []byte        `json:"manifest"`
+	Name         string        `json:"name"`
 }
 type Observation struct{ UID, ResourceVersion, Image string }
 
@@ -77,7 +80,8 @@ func New(c Config) (*Executor, error) {
 // trustedDigest must come from an independent trusted artifact measurement.
 func (e *Executor) Execute(ctx context.Context, env gate.Envelope, manifest []byte, trustedDigest string) (Observation, error) {
 	manifest = append([]byte(nil), manifest...)
-	decision, err := release.Verify(env, e.config.PublicKey, e.config.Policy, manifest, trustedDigest, time.Now())
+	authorizedAt := time.Now()
+	decision, err := release.Verify(env, e.config.PublicKey, e.config.Policy, manifest, trustedDigest, authorizedAt)
 	if err != nil {
 		return Observation{}, err
 	}
@@ -88,7 +92,7 @@ func (e *Executor) Execute(ctx context.Context, env gate.Envelope, manifest []by
 	if !name.MatchString(d.Metadata.Name) {
 		return Observation{}, errors.New("invalid Deployment name")
 	}
-	r := Record{Decision: decision, Manifest: manifest, Name: d.Metadata.Name}
+	r := Record{Version: 2, Envelope: env, AuthorizedAt: authorizedAt.Unix(), Decision: decision, Manifest: manifest, Name: d.Metadata.Name}
 	encoded, err := json.Marshal(r)
 	if err != nil {
 		return Observation{}, err
@@ -116,10 +120,29 @@ func (e *Executor) Execute(ctx context.Context, env gate.Envelope, manifest []by
 	if _, err = release.Verify(env, e.config.PublicKey, e.config.Policy, manifest, trustedDigest, time.Now()); err != nil {
 		return Observation{}, err
 	}
-	if _, err = e.request(ctx, http.MethodPost, "", manifest); err != nil {
+	created, err := e.request(ctx, http.MethodPost, "", manifest)
+	if err != nil {
 		return Observation{}, fmt.Errorf("uncertain creation; reconcile read-only: %w", err)
 	}
-	return e.observe(ctx, r)
+	if err = deploycheck.CheckObserved(manifest, created, e.config.Namespace, trustedDigest); err != nil {
+		return Observation{}, fmt.Errorf("created object failed policy readback; inspect cluster: %w", err)
+	}
+	var identity struct {
+		Metadata struct {
+			UID string `json:"uid"`
+		} `json:"metadata"`
+	}
+	if json.Unmarshal(created, &identity) != nil || identity.Metadata.UID == "" {
+		return Observation{}, errors.New("created object lacks a verified UID")
+	}
+	observation, err := e.observe(ctx, r)
+	if err != nil {
+		return Observation{}, err
+	}
+	if observation.UID != identity.Metadata.UID {
+		return Observation{}, errors.New("Deployment was replaced between create and readback")
+	}
+	return observation, nil
 }
 
 // Recover only reads independently observed cluster state. It never repeats a
@@ -138,19 +161,42 @@ func (e *Executor) Recover(ctx context.Context, id string) (Observation, error) 
 	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > 2<<20 {
 		return Observation{}, errors.New("unsafe journal record")
 	}
-	b, err := os.ReadFile(p)
+	f, err := os.Open(p)
 	if err != nil {
 		return Observation{}, err
+	}
+	b, err := io.ReadAll(io.LimitReader(f, (2<<20)+1))
+	closeErr := f.Close()
+	if err != nil {
+		return Observation{}, err
+	}
+	if closeErr != nil || len(b) > 2<<20 {
+		return Observation{}, errors.New("journal read failed or exceeds limit")
 	}
 	var r Record
 	if err = json.Unmarshal(b, &r); err != nil {
 		return Observation{}, errors.New("incomplete journal; no mutation permitted")
 	}
+	canonical, err := json.Marshal(r)
+	if err != nil || !bytes.Equal(canonical, b) {
+		return Observation{}, errors.New("ambiguous or noncanonical journal record")
+	}
+	if r.Version != 2 || r.Envelope.Intent.Nonce != id || r.AuthorizedAt <= 0 || r.AuthorizedAt > time.Now().Unix() {
+		return Observation{}, errors.New("journal version, nonce or authorization time denied")
+	}
 	if r.Decision.Environment != e.config.Namespace || r.Decision.Workload != e.config.Policy.Workload || r.Decision.Operation != "deploy" || !name.MatchString(r.Name) {
 		return Observation{}, errors.New("journal scope mismatch")
 	}
-	if err = deploycheck.Check(r.Manifest, e.config.Namespace, r.Decision.ArtifactSHA256); err != nil {
+	verified, err := release.Verify(r.Envelope, e.config.PublicKey, e.config.Policy, r.Manifest, r.Decision.ArtifactSHA256, time.Unix(r.AuthorizedAt, 0))
+	if err != nil {
 		return Observation{}, err
+	}
+	if verified != r.Decision {
+		return Observation{}, errors.New("journal decision differs from signed authorization")
+	}
+	var request deploycheck.Deployment
+	if json.Unmarshal(r.Manifest, &request) != nil || request.Metadata.Name != r.Name {
+		return Observation{}, errors.New("journal resource name differs from signed manifest")
 	}
 	return e.observe(ctx, r)
 }
@@ -197,6 +243,9 @@ func (e *Executor) request(ctx context.Context, method, resource string, body []
 func (e *Executor) observe(ctx context.Context, r Record) (Observation, error) {
 	b, err := e.request(ctx, http.MethodGet, "/"+r.Name, nil)
 	if err != nil {
+		return Observation{}, err
+	}
+	if err = deploycheck.CheckObserved(r.Manifest, b, e.config.Namespace, r.Decision.ArtifactSHA256); err != nil {
 		return Observation{}, err
 	}
 	var requested, observed struct {

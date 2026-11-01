@@ -19,7 +19,8 @@ owner's explicit choice.
   no environment proxy. Dry-run is not a separate authorization boundary.
 - Experimental Linux create-only executor with a protected token file,
   namespace-scoped configuration and one durable request/replay record before POST.
-  Read-only recovery compares independently fetched Deployment identity and image;
+  Read-only recovery revalidates the signed journal and compares the supported
+  admitted Deployment configuration, not only the image;
   it never retries an uncertain mutation.
 - Bounded exact-byte artifact measurement. It does not authenticate a publisher
   or verify build provenance.
