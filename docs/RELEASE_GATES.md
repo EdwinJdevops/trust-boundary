@@ -19,7 +19,7 @@ Public source, passing CI and an attractive announcement do not change the trust
 | Artifact integrity | Exact registry-response measurement and digest-pinned manifest | Publisher identity and approved builder provenance |
 | Validation approval | Portable unsigned bundle; quorum verification with temporary test keys | Independently controlled validators and mandatory evidence enforcement in executor |
 | Recovery | Exclusive signed journal; GET-only recovery; incomplete/altered journal denial; controlled SIGKILL tests | Power-loss/disk failure injection, operator protocol |
-| Repository integrity | Pinned actions, read-only CI, archive checksums | Enforced protected review path and publication/history review |
+| Repository integrity | Pinned actions, read-only CI, archive checksums, publication scans, public protected PR/check path | Independent human approval and review |
 | Runtime containment | Restricted workload fixture | Tested network/kernel boundaries, independent security review |
 
 Verification reports record exact revisions and executed results. A configured test
@@ -51,3 +51,7 @@ redistribution concerns; retain findings and verify public security reporting an
 branch protection after any visibility change. Permission to publish does not
 itself establish that review. Do not publish signing material or turn temporary
 test keys into trust roots. Do not create paid infrastructure to satisfy a launch label.
+
+The [repository settings record](REPOSITORY_SETTINGS.md) documents the completed
+public-preview change and verified controls. The protected PR path currently
+requires zero human approvals; it is not an independent review guarantee.
