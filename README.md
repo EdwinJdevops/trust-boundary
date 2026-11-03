@@ -44,6 +44,8 @@ hash-bound local evidence. The [admitted-state record](docs/VERIFICATION_ADMITTE
 and earlier reports remain historical evidence.
 The [release acceptance gates](docs/RELEASE_GATES.md) define the developer-preview
 scope, operational recovery constraints and evidence still required for production.
+The [repository settings record](docs/REPOSITORY_SETTINGS.md) documents public
+visibility, protected checks, secret push protection and private security reporting.
 
 ```sh
 go build ./...

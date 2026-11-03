@@ -1,0 +1,26 @@
+{
+  "required_status_checks": {
+    "checks": [
+      {
+        "app_id": 15368,
+        "context": "verify (1.26.x)"
+      },
+      {
+        "app_id": 15368,
+        "context": "verify (1.27.x)"
+      }
+    ],
+    "strict": true
+  },
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 0,
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false
+  },
+  "enforce_admins": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_conversation_resolution": true,
+  "restrictions": null,
+  "required_linear_history": true
+}
