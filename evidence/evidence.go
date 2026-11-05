@@ -157,6 +157,28 @@ func (p Policy) Validate() error {
 	return nil
 }
 
+// CheckStatement checks the identity and freshness of an unsigned statement
+// against an independently configured policy before it can be signed.
+func (p Policy) CheckStatement(s Statement, now time.Time) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+	return p.checkStatement(s, now)
+}
+
+func (p Policy) checkStatement(s Statement, now time.Time) error {
+	if err := s.Validate(); err != nil {
+		return err
+	}
+	if s.Commit != p.Commit || s.SourceSHA256 != p.SourceSHA256 || s.ArtifactSHA256 != p.ArtifactSHA256 || s.SuiteSHA256 != p.SuiteSHA256 {
+		return errors.New("evidence scope differs from trusted expectations")
+	}
+	if s.FinishedAt > now.Unix() || now.Sub(time.Unix(s.StartedAt, 0)) > p.MaxAge {
+		return errors.New("stale or future evidence")
+	}
+	return nil
+}
+
 // VerifyQuorum fails closed if any supplied attestation is invalid. Distinct
 // trusted keys are necessary, but operational independence is an enrollment
 // requirement that cryptography alone cannot prove.
@@ -169,16 +191,10 @@ func VerifyQuorum(attestations []Attestation, p Policy, now time.Time) error {
 	}
 	seen := map[string]bool{}
 	for _, a := range attestations {
-		if err := a.Statement.Validate(); err != nil {
+		if err := p.checkStatement(a.Statement, now); err != nil {
 			return err
 		}
 		s := a.Statement
-		if s.Commit != p.Commit || s.SourceSHA256 != p.SourceSHA256 || s.ArtifactSHA256 != p.ArtifactSHA256 || s.SuiteSHA256 != p.SuiteSHA256 {
-			return errors.New("evidence scope differs from trusted expectations")
-		}
-		if s.FinishedAt > now.Unix() || s.StartedAt > now.Unix() || now.Sub(time.Unix(s.StartedAt, 0)) > p.MaxAge {
-			return errors.New("stale or future evidence")
-		}
 		key, ok := p.Keys[a.SignerID]
 		if !ok {
 			return errors.New("unknown validator")
