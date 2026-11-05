@@ -59,8 +59,9 @@ plane administrators, node root and privileged local users remain trusted.
   This does not prevent an already accepted mutation or attest resulting Pods,
   running bytes or artifact provenance. Privileged cluster actors can change state.
   Pod imageID evidence is separately printed by the supervisor.
-- No key rotation, revocation, approval quorum, tamper-evident remote audit, HA or
-  distributed replay protocol. Private local Linux storage is required; no NFS.
+- The executor requires a validation quorum. The release grant still comes from
+  one signing key. Production key rotation, revocation, tamper-evident remote audit,
+  HA and distributed replay remain open. Use private local Linux storage.
   Parent-directory substitution/ownership must be prevented by trusted installation.
 - No production cloud credentials, automatic rollout update/delete, production
   readiness, external audit or proof of safety for arbitrary forks is claimed.
