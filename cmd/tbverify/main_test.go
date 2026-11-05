@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/EdwinJdevops/trust-boundary/evidence"
+	"github.com/EdwinJdevops/trust-boundary/internal/evidencefiles"
 )
 
 func TestRecordInspectAndTamper(t *testing.T) {
@@ -62,7 +63,7 @@ func TestVerifyRequiresExternalDistinctKeys(t *testing.T) {
 	for _, name := range evidence.RequiredChecks() {
 		s.Checks = append(s.Checks, evidence.Check{Name: name, LogSHA256: evidence.Hash([]byte(name))})
 	}
-	p := diskPolicy{Commit: s.Commit, SourceSHA256: s.SourceSHA256, ArtifactSHA256: s.ArtifactSHA256, SuiteSHA256: s.SuiteSHA256, Minimum: 2, MaxAgeSeconds: 3600, Keys: map[string]string{}}
+	p := evidencefiles.DiskPolicy{Commit: s.Commit, SourceSHA256: s.SourceSHA256, ArtifactSHA256: s.ArtifactSHA256, SuiteSHA256: s.SuiteSHA256, Minimum: 2, MaxAgeSeconds: 3600, Keys: map[string]string{}}
 	args := []string{"verify", "--policy", filepath.Join(dir, "policy.json")}
 	var paths []string
 	for i, id := range []string{"independent-a", "independent-b"} {

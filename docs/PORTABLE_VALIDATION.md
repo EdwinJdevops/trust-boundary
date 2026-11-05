@@ -80,7 +80,7 @@ expected digests come from independently installed policy, never from the bundle
 All documents use the canonical JSON emitted by Go encoding/json for these fixed
 versioned structs; reordered/indented documents, duplicate keys, case aliases,
 unknown fields and trailing data are rejected. The trusted policy schema is
-defined by diskPolicy in cmd/tbverify/main.go, using lowercase hex Ed25519 public
+defined by `DiskPolicy` in `internal/evidencefiles/files.go`, using hex Ed25519 public
 keys. This custom research format is not DSSE, in-toto or SLSA provenance.
 
 The protected executor requires a fresh quorum before consuming the grant and
@@ -102,6 +102,38 @@ Recovery retains the version-2 journal format and verifies the original release
 signature before a read-only GET. Historical recovery can proceed with an empty
 attestation set and valid operator policy. The journal records release
 authorization. Validator receipts belong in the operator's evidence store.
+
+## Issue validator evidence
+
+Build `tbattest` on Linux and run it under the validator's own identity. Keep the
+key and trusted policy outside the runner's control. Each validator reviews and
+reruns the approved suite, then transfers its own statement and files into
+private staging. Supply the actual deployable artifact when issuing deployment
+evidence. The supervisor's verifier executable digest serves the portable
+verification workflow.
+
+The operator enrolls the validator's public key in the trusted policy. The issuer
+expects an existing Ed25519 PKCS#8 DER private key owned by the signer with mode
+0400 or 0600. Use trusted parent directories and keep staged inputs stable during
+issuance. The issuer checks policy scope, freshness and bundle hashes, then checks
+that the key matches the enrolled identity. It emits a single canonical attestation
+to standard output.
+
+```sh
+go build -o tbattest ./cmd/tbattest
+```
+
+From the validator's staging directory, invoke the trusted binary:
+
+```sh
+/path/to/tbattest --policy trusted-policy.json --validator validator-a --key validator-a.der \
+  --statement statement.json --source source.tar --artifact release-artifact \
+  --suite suite.sha256 --logs logs > validator-a.json
+```
+
+Repeat under the other validator's independent control and verify the resulting
+quorum with `tbverify verify`. The operator's review establishes which run produced
+the inputs. The issuer checks the supplied bytes and signs the reviewed statement.
 
 ## Remaining gates
 
