@@ -15,11 +15,11 @@ import (
 	"github.com/EdwinJdevops/trust-boundary/evidence"
 )
 
-func addValidationFixture(t *testing.T, c Config, artifact string, at time.Time) Config {
+func addValidationFixture(t *testing.T, c Config, source, artifact string, at time.Time) Config {
 	t.Helper()
 	digest := strings.Repeat("d", 64)
 	s := evidence.Statement{
-		Version: 1, Commit: strings.Repeat("e", 40), SourceSHA256: strings.Repeat("b", 64),
+		Version: 1, Commit: strings.Repeat("e", 40), SourceSHA256: source,
 		ArtifactSHA256: artifact, SuiteSHA256: digest, EnvironmentSHA256: digest,
 		GoVersion: "test fixture", Platform: "linux/amd64", StartedAt: at.Add(-time.Second).Unix(), FinishedAt: at.Unix(),
 	}
@@ -55,13 +55,15 @@ func TestValidationDenialPrecedesJournalAndAPI(t *testing.T) {
 	}))
 	defer s.Close()
 	for label, change := range map[string]func(Config) Config{
-		"missing":          func(c Config) Config { c.Attestations = nil; return c },
-		"duplicate":        func(c Config) Config { c.Attestations[1] = c.Attestations[0]; return c },
-		"forged":           func(c Config) Config { c.Attestations[0].Signature = strings.Repeat("0", 128); return c },
-		"stale":            func(c Config) Config { c.ValidationPolicy.MaxAge = time.Nanosecond; return c },
-		"different source": func(c Config) Config { c.ValidationPolicy.SourceSHA256 = strings.Repeat("c", 64); return c },
+		"missing":   func(c Config) Config { c.Attestations = nil; return c },
+		"duplicate": func(c Config) Config { c.Attestations[1] = c.Attestations[0]; return c },
+		"forged":    func(c Config) Config { c.Attestations[0].Signature = strings.Repeat("0", 128); return c },
+		"stale":     func(c Config) Config { c.ValidationPolicy.MaxAge = time.Nanosecond; return c },
+		"different source": func(c Config) Config {
+			return addValidationFixture(t, c, strings.Repeat("c", 64), imageHash, time.Now())
+		},
 		"different artifact": func(c Config) Config {
-			return addValidationFixture(t, c, strings.Repeat("f", 64), time.Now())
+			return addValidationFixture(t, c, env.Intent.SourceSHA256, strings.Repeat("f", 64), time.Now())
 		},
 	} {
 		t.Run(label, func(t *testing.T) {

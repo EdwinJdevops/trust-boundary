@@ -55,7 +55,7 @@ func config(t *testing.T, s *httptest.Server, pub ed25519.PublicKey) Config {
 		t.Fatal(err)
 	}
 	c := Config{ServerURL: s.URL, TokenFile: token, Namespace: "staging", JournalDir: dir, CA: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: s.Certificate().Raw}), PublicKey: pub, Policy: gate.Policy{Issuer: "ci", Workload: "worker", Environment: "staging", Operation: "deploy"}}
-	return addValidationFixture(t, c, imageHash, time.Now())
+	return addValidationFixture(t, c, strings.Repeat("b", 64), imageHash, time.Now())
 }
 func observed(doc []byte) []byte {
 	var v map[string]any

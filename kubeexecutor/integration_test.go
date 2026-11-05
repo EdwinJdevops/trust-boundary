@@ -51,7 +51,7 @@ func TestRealKubernetes(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := Config{ServerURL: os.Getenv("TB_SERVER"), CA: ca, TokenFile: os.Getenv("TB_TOKEN"), JournalDir: os.Getenv("TB_JOURNAL"), Namespace: "staging", PublicKey: pub, Policy: gate.Policy{Issuer: "ci", Workload: "worker", Environment: "staging", Operation: "deploy"}}
-	c = addValidationFixture(t, c, digest, time.Now())
+	c = addValidationFixture(t, c, env.Intent.SourceSHA256, digest, time.Now())
 	withoutEvidence := c
 	withoutEvidence.Attestations = nil
 	denied, err := New(withoutEvidence)

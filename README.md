@@ -40,6 +40,9 @@ validator enrollment remains a production gate.
 
 ## Verification
 
+The [deployment quorum verification record](docs/evidence/quorum-8fe6b13/README.md)
+links the tested revision to the real cluster logs and bundle digests.
+
 The [process-crash and rollout verification record](docs/VERIFICATION_CRASH.md)
 contains the exact tested commit, passing hosted CI, real cluster results and
 hash-bound local evidence. The [admitted-state record](docs/VERIFICATION_ADMITTED.md)
