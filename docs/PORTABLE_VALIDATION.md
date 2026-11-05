@@ -83,21 +83,32 @@ unknown fields and trailing data are rejected. The trusted policy schema is
 defined by diskPolicy in cmd/tbverify/main.go, using lowercase hex Ed25519 public
 keys. This custom research format is not DSSE, in-toto or SLSA provenance.
 
-Distinct key bytes do not prove organizational or operational independence. Real
-independent validators have not been enrolled. Only temporary unit-test keys are
-used in automated crypto tests. The original deployment executor has not been
-wired to require these attestations: its signed-release behavior is unchanged.
-Claiming an enforced independent deployment gate would therefore be incorrect.
+The protected executor requires a fresh quorum before consuming the grant and
+checks freshness again before sending POST. The trusted operator supplies
+`Config.ValidationPolicy` and `Config.Attestations`. The policy pins the source
+archive and deployable artifact digests, commit, suite and validator public keys.
+The executor matches those digests against the signed intent and independent
+artifact measurement. It rejects reuse of the release signer's key as a
+validator key. Deployments for another source or artifact require a new policy.
+
+The portable runner records the digest of its verifier executable. Deployment
+attestations must instead cover the actual release artifact. The integration
+fixture models that binding using temporary keys and synthetic check receipts.
+Independent validator enrollment, signing operations and release provenance
+remain production gates. Separate keys establish cryptographic separation.
+Operational independence requires separate control over those keys and runners.
+
+Recovery retains the version-2 journal format and verifies the original release
+signature before a read-only GET. Historical recovery can proceed with an empty
+attestation set and valid operator policy. The journal records release
+authorization. Validator receipts belong in the operator's evidence store.
 
 ## Remaining gates
 
-Enroll independently controlled validators, define revocation/key rotation and
-approved toolchains, protect signing outside test execution, bind source and
-artifact expectations to approved releases, then enforce authenticated evidence in
-the executor without an optional bypass. Test that path against real credentials.
-Branch protection remains an unresolved account gate. Hosted CI executed and
-passed on 2026-11-01 for commit 0aef0e7; the earlier billing-related refusals remain
-historical evidence, not the current CI status. No billing settings were changed.
+Enroll independently controlled validators, define key rotation and revocation,
+approve toolchains, and protect signing outside test execution. Test issuance
+and verification with production identities and release evidence. Repository
+controls are recorded in [Repository settings](REPOSITORY_SETTINGS.md).
 
 Design reference: [SLSA artifact verification](https://slsa.dev/spec/v1.2/verifying-artifacts)
 requires configured trust roots and artifact/policy matching; the present work

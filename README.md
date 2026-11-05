@@ -33,8 +33,10 @@ See [architecture and unresolved risks](docs/ARCHITECTURE.md),
 
 The [portable validation runner](docs/PORTABLE_VALIDATION.md) runs the full suite
 against a clean exact commit and emits hash-bound, explicitly unsigned evidence.
-The evidence verifier supports externally configured two-key attestation quorums;
-no independent validators are enrolled and this is not yet a deployment gate.
+The executor requires fresh attestations from at least two configured validator
+keys before creating a deployment. The operator pins the release source and
+artifact digests. The integration fixture uses temporary keys. Independent
+validator enrollment remains a production gate.
 
 ## Verification
 

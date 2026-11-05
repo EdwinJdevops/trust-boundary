@@ -54,7 +54,8 @@ func config(t *testing.T, s *httptest.Server, pub ed25519.PublicKey) Config {
 	if err := os.WriteFile(token, []byte("synthetic-token"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	return Config{ServerURL: s.URL, TokenFile: token, Namespace: "staging", JournalDir: dir, CA: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: s.Certificate().Raw}), PublicKey: pub, Policy: gate.Policy{Issuer: "ci", Workload: "worker", Environment: "staging", Operation: "deploy"}}
+	c := Config{ServerURL: s.URL, TokenFile: token, Namespace: "staging", JournalDir: dir, CA: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: s.Certificate().Raw}), PublicKey: pub, Policy: gate.Policy{Issuer: "ci", Workload: "worker", Environment: "staging", Operation: "deploy"}}
+	return addValidationFixture(t, c, imageHash, time.Now())
 }
 func observed(doc []byte) []byte {
 	var v map[string]any
