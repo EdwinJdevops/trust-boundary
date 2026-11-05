@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/EdwinJdevops/trust-boundary/deploycheck"
+	"github.com/EdwinJdevops/trust-boundary/evidence"
 	"github.com/EdwinJdevops/trust-boundary/gate"
 	"github.com/EdwinJdevops/trust-boundary/release"
 )
@@ -32,6 +33,10 @@ type Config struct {
 	CA                                          []byte
 	PublicKey                                   ed25519.PublicKey
 	Policy                                      gate.Policy
+	// ValidationPolicy pins the approved release and validator keys. Only the
+	// trusted operator may supply this policy.
+	ValidationPolicy evidence.Policy
+	Attestations     []evidence.Attestation
 }
 type Executor struct {
 	config Config
@@ -71,6 +76,28 @@ func New(c Config) (*Executor, error) {
 		return nil, errors.New("explicit API CA required")
 	}
 	c.PublicKey = append(ed25519.PublicKey(nil), c.PublicKey...)
+	if err := c.ValidationPolicy.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid validation policy: %w", err)
+	}
+	keys := make(map[string]ed25519.PublicKey, len(c.ValidationPolicy.Keys))
+	for id, key := range c.ValidationPolicy.Keys {
+		if bytes.Equal(key, c.PublicKey) {
+			return nil, errors.New("release signer cannot be a validator")
+		}
+		keys[id] = append(ed25519.PublicKey(nil), key...)
+	}
+	c.ValidationPolicy.Keys = keys
+	if len(c.Attestations) > 16 {
+		return nil, errors.New("too many validation attestations")
+	}
+	c.Attestations = append([]evidence.Attestation(nil), c.Attestations...)
+	for i := range c.Attestations {
+		s := &c.Attestations[i].Statement
+		if err := s.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid validation statement: %w", err)
+		}
+		s.Checks = append([]evidence.Check(nil), s.Checks...)
+	}
 	return &Executor{config: c, origin: strings.TrimSuffix(c.ServerURL, "/"), http: &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{Proxy: nil, TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: roots}}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
 }
 
@@ -84,6 +111,13 @@ func (e *Executor) Execute(ctx context.Context, env gate.Envelope, manifest []by
 	decision, err := release.Verify(env, e.config.PublicKey, e.config.Policy, manifest, trustedDigest, authorizedAt)
 	if err != nil {
 		return Observation{}, err
+	}
+	p := e.config.ValidationPolicy
+	if p.SourceSHA256 != env.Intent.SourceSHA256 || p.ArtifactSHA256 != trustedDigest {
+		return Observation{}, errors.New("release differs from validation policy")
+	}
+	if err = evidence.VerifyQuorum(e.config.Attestations, p, authorizedAt); err != nil {
+		return Observation{}, fmt.Errorf("deployment validation denied: %w", err)
 	}
 	var d deploycheck.Deployment
 	if err = json.Unmarshal(manifest, &d); err != nil {
@@ -116,9 +150,13 @@ func (e *Executor) Execute(ctx context.Context, env gate.Envelope, manifest []by
 	if syncErr != nil || closeErr != nil {
 		return Observation{}, errors.New("journal directory sync failed")
 	}
-	// Waiting on disk must never extend a grant's lifetime.
-	if _, err = release.Verify(env, e.config.PublicKey, e.config.Policy, manifest, trustedDigest, time.Now()); err != nil {
+	// Disk writes can outlast either the release grant or the evidence window.
+	beforeCreate := time.Now()
+	if _, err = release.Verify(env, e.config.PublicKey, e.config.Policy, manifest, trustedDigest, beforeCreate); err != nil {
 		return Observation{}, err
+	}
+	if err = evidence.VerifyQuorum(e.config.Attestations, p, beforeCreate); err != nil {
+		return Observation{}, fmt.Errorf("deployment validation denied: %w", err)
 	}
 	created, err := e.request(ctx, http.MethodPost, "", manifest)
 	if err != nil {

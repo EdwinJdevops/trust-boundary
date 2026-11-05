@@ -17,7 +17,7 @@ Public source, passing CI and an attractive announcement do not change the trust
 | Separate deployment credentials | Real caller/executor Unix UIDs and service accounts; RBAC/admission denial tests | Protected production installation and credential lifecycle |
 | Admitted configuration | Supported Deployment comparison, UID replacement and mutation rejection tests | Resulting-Pod and continuous verification; prevent unsafe admission before persistence |
 | Artifact integrity | Exact registry-response measurement and digest-pinned manifest | Publisher identity and approved builder provenance |
-| Validation approval | Portable unsigned bundle; quorum verification with temporary test keys | Independently controlled validators and mandatory evidence enforcement in executor |
+| Validation approval | Executor requires a fresh source- and artifact-bound quorum; fixtures use temporary keys | Independent validator enrollment and release evidence issuance |
 | Recovery | Exclusive signed journal; GET-only recovery; incomplete/altered journal denial; controlled SIGKILL tests | Power-loss/disk failure injection, operator protocol |
 | Repository integrity | Pinned actions, read-only CI, archive checksums, publication scans, public protected PR/check path | Independent human approval and review |
 | Runtime containment | Restricted workload fixture | Tested network/kernel boundaries, independent security review |

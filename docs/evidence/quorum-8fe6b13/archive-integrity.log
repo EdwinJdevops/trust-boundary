@@ -1,0 +1,14 @@
+check=archive-integrity commit=8fe6b139d0cc6756e3eb4848b090e89764381e51
+docs/history/archives/trust-boundary-experiment-v002.zip: OK
+docs/history/archives/trust-boundary-experiment-v003.zip: OK
+docs/history/archives/trust-boundary-experiment-v004.zip: OK
+docs/history/archives/trust-boundary-experiment-v005.zip: OK
+docs/history/archives/trust-boundary-experiment-v006.zip: OK
+docs/history/archives/trust-boundary-experiment-v007.zip: OK
+docs/history/archives/trust-boundary-experiment-v008.zip: OK
+docs/history/archives/trust-boundary-experiment-v009.zip: OK
+docs/history/archives/trust-boundary-experiment.zip: OK
+docs/history/archives/trust-boundary-go-v011.zip: OK
+docs/history/archives/trust-boundary-go-v012.zip: OK
+docs/history/archives/trust-boundary-go-v013.zip: OK
+docs/history/archives/trust-boundary-release-research-v010.zip: OK

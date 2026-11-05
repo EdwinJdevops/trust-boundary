@@ -1,0 +1,9 @@
+check=race commit=8fe6b139d0cc6756e3eb4848b090e89764381e51
+ok  	github.com/EdwinJdevops/trust-boundary/artifact	1.017s	coverage: 77.8% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/cmd/tbverify	1.030s	coverage: 75.0% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/deploycheck	1.080s	coverage: 80.1% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/evidence	1.048s	coverage: 83.8% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/gate	1.040s	coverage: 80.3% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/kubeexecutor	1.605s	coverage: 81.0% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/kubepreflight	1.112s	coverage: 76.6% of statements
+ok  	github.com/EdwinJdevops/trust-boundary/release	1.044s	coverage: 100.0% of statements

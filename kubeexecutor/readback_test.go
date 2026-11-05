@@ -154,6 +154,7 @@ func TestExpiredSignedRecordAllowsReadOnlyRecovery(t *testing.T) {
 	defer s.Close()
 	c := config(t, s, pub)
 	admittedAt := now.Add(-20 * time.Second)
+	c.Attestations = nil // A historical GET does not consume a deployment grant.
 	decision, err := release.Verify(env, pub, c.Policy, doc, imageHash, admittedAt)
 	if err != nil {
 		t.Fatal(err)

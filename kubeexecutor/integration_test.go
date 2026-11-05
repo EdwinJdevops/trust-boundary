@@ -51,6 +51,17 @@ func TestRealKubernetes(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := Config{ServerURL: os.Getenv("TB_SERVER"), CA: ca, TokenFile: os.Getenv("TB_TOKEN"), JournalDir: os.Getenv("TB_JOURNAL"), Namespace: "staging", PublicKey: pub, Policy: gate.Policy{Issuer: "ci", Workload: "worker", Environment: "staging", Operation: "deploy"}}
+	c = addValidationFixture(t, c, env.Intent.SourceSHA256, digest, time.Now())
+	withoutEvidence := c
+	withoutEvidence.Attestations = nil
+	denied, err := New(withoutEvidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = denied.Execute(context.Background(), env, doc, digest); err == nil || !strings.Contains(err.Error(), "validator quorum missing") {
+		t.Fatalf("expected missing-evidence denial, got %v", err)
+	}
+	t.Log("missing validator quorum denied before creation")
 	e, err := New(c)
 	if err != nil {
 		t.Fatal(err)

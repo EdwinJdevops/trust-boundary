@@ -33,10 +33,15 @@ See [architecture and unresolved risks](docs/ARCHITECTURE.md),
 
 The [portable validation runner](docs/PORTABLE_VALIDATION.md) runs the full suite
 against a clean exact commit and emits hash-bound, explicitly unsigned evidence.
-The evidence verifier supports externally configured two-key attestation quorums;
-no independent validators are enrolled and this is not yet a deployment gate.
+The executor requires fresh attestations from at least two configured validator
+keys before creating a deployment. The operator pins the release source and
+artifact digests. The integration fixture uses temporary keys. Independent
+validator enrollment remains a production gate.
 
 ## Verification
+
+The [deployment quorum verification record](docs/evidence/quorum-8fe6b13/README.md)
+links the tested revision to the real cluster logs and bundle digests.
 
 The [process-crash and rollout verification record](docs/VERIFICATION_CRASH.md)
 contains the exact tested commit, passing hosted CI, real cluster results and
