@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -90,5 +91,51 @@ func TestReleaseSignerCannotValidateItsOwnRelease(t *testing.T) {
 	c.ValidationPolicy.Keys["validator-one"] = pub
 	if _, err := New(c); err == nil || !strings.Contains(err.Error(), "release signer") {
 		t.Fatalf("expected shared-key rejection, got %v", err)
+	}
+}
+
+func TestValidatorReplacementRejectsRetiredSignature(t *testing.T) {
+	doc := document()
+	env, pub := signed(t, doc)
+	var calls atomic.Int32
+	s := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		if r.Method == http.MethodPost {
+			w.WriteHeader(http.StatusCreated)
+		}
+		_, _ = w.Write(observed(doc))
+	}))
+	defer s.Close()
+	c := config(t, s, pub)
+	retired := c.Attestations[0]
+	newPub, newPriv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.ValidationPolicy.Keys[retired.SignerID] = newPub
+	e, err := New(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Execute(context.Background(), env, doc, imageHash); err == nil || !strings.Contains(err.Error(), "validator signature denied") {
+		t.Fatalf("expected retired signature denial, got %v", err)
+	}
+	if calls.Load() != 0 {
+		t.Fatal("retired signature reached the API")
+	}
+	if _, err := os.Stat(filepath.Join(c.JournalDir, env.Intent.Nonce)); !os.IsNotExist(err) {
+		t.Fatalf("retired signature consumed the nonce: %v", err)
+	}
+	replacement, err := evidence.Sign(retired.Statement, retired.SignerID, newPriv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Attestations[0] = replacement
+	e, err = New(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Execute(context.Background(), env, doc, imageHash); err != nil {
+		t.Fatalf("replacement quorum could not use the original grant: %v", err)
 	}
 }
