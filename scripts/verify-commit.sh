@@ -48,7 +48,7 @@ chmod -R a+rX,go-w "$work/source"
 (
   cd "$repo"
   sha256sum scripts/verify-commit.sh scripts/integration.sh deploy/kubernetes/test-boundary.yaml \
-    cmd/tbverify/main.go evidence/evidence.go
+    cmd/tbverify/main.go cmd/tbattest/main_linux.go internal/evidencefiles/files.go evidence/evidence.go
 ) > "$output/suite.sha256"
 started=$(date +%s)
 goversion=$(env -i PATH="$safe_path" HOME="$work/supervisor" GOENV=off GOTOOLCHAIN=local GOWORK=off "$go_bin" version)
