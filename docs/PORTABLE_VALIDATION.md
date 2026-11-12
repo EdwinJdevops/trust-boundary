@@ -114,6 +114,21 @@ authorization. Validator receipts belong in the operator's evidence store.
 
 ## Issue validator evidence
 
+For the Linux CLI binaries, the manually dispatched **Attested release
+candidate** workflow builds from `main` and publishes GitHub build provenance.
+Download the candidate artifact from its workflow run and verify each binary
+against the expected source commit and signing workflow:
+
+```sh
+gh attestation verify ./tbverify --repo EdwinJdevops/trust-boundary \
+  --signer-workflow EdwinJdevops/trust-boundary/.github/workflows/release-candidate.yml \
+  --source-digest "$EXPECTED_COMMIT" --deny-self-hosted-runners
+```
+
+Use the same command for `tbattest`. These receipts establish the CLI build's
+origin. The deployment quorum requires separate validator evidence for the
+workload artifact and its approved checks.
+
 Build `tbattest` on Linux and run it under the validator's own identity. Keep the
 key and trusted policy outside the runner's control. Each validator reviews and
 reruns the approved suite, then transfers its own statement and files into
