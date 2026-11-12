@@ -1,0 +1,46 @@
+name: Attested release candidate
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  candidate:
+    if: github.ref == 'refs/heads/main' && github.repository == 'EdwinJdevops/trust-boundary'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.26.8'
+          cache: false
+      - name: Build Linux candidate binaries
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: amd64
+          GOAMD64: v1
+          GOENV: 'off'
+          GOTOOLCHAIN: local
+          GOWORK: 'off'
+          GOPROXY: 'off'
+          GOSUMDB: 'off'
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          mkdir dist
+          go build -trimpath -buildvcs=false -o dist/tbverify ./cmd/tbverify
+          go build -trimpath -buildvcs=false -o dist/tbattest ./cmd/tbattest
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: 'dist/*'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: trust-boundary-linux-amd64-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
