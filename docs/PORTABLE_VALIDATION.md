@@ -112,6 +112,21 @@ signature before a read-only GET. Historical recovery can proceed with an empty
 attestation set and valid operator policy. The journal records release
 authorization. Validator receipts belong in the operator's evidence store.
 
+## Build the reference workload
+
+`tbworkload` serves `GET /healthz` on port 8080. Its scratch image runs as UID
+65532 and requires no writable application filesystem. Use a trusted Linux
+host with Go, Docker Buildx and jq to build an OCI archive from a pinned commit:
+
+```sh
+bash scripts/build-reference-workload.sh "$EXPECTED_COMMIT" ./reference-candidate
+```
+
+The build record identifies the source archive, OCI archive and exact image
+manifest. The manifest digest is the value to use in a registry reference after
+publishing those same bytes. The local record is unsigned. A registry and signed
+build provenance are required for the public-registry validation path.
+
 ## Issue validator evidence
 
 For the Linux CLI binaries, the manually dispatched **Attested release
