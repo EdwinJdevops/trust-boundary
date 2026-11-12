@@ -135,9 +135,25 @@ Repeat under the other validator's independent control and verify the resulting
 quorum with `tbverify verify`. The operator's review establishes which run produced
 the inputs. The issuer checks the supplied bytes and signs the reviewed statement.
 
+## Replace or revoke a validator key
+
+Each executor takes a snapshot of its policy and attestations at construction.
+Editing a policy file leaves existing executor instances with their original keys.
+For a planned rotation, stage the replacement public key and a fresh quorum first.
+For a suspected compromise, stop admitting new deployment requests immediately
+and stop or isolate every executor that still trusts the affected key. Inspect
+in-flight creates through the existing read-only recovery path.
+
+Remove the affected public key from the trusted policy and discard attestations
+made with that key. Obtain a fresh quorum from the resulting enrolled set. If the
+remaining set cannot meet the existing threshold, keep deployment paused until
+another validator is enrolled. Verify the replacement quorum with `tbverify verify`
+and construct new executor instances using the updated policy and evidence. Keep
+the existing journal directory so previously consumed grants stay consumed.
+
 ## Remaining gates
 
-Enroll independently controlled validators, define key rotation and revocation,
+Enroll independently controlled validators, exercise the key replacement procedure,
 approve toolchains, and protect signing outside test execution. Test issuance
 and verification with production identities and release evidence. Repository
 controls are recorded in [Repository settings](REPOSITORY_SETTINGS.md).
