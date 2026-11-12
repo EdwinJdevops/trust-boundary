@@ -36,7 +36,11 @@ func TestRealKubernetes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc := bytes.ReplaceAll(document(), []byte("registry.example/app@sha256:"+imageHash), []byte("registry.k8s.io/pause@sha256:"+digest))
+	image := os.Getenv("TB_IMAGE")
+	if !strings.HasSuffix(image, "@sha256:"+digest) {
+		t.Fatal("configured image differs from measured artifact")
+	}
+	doc := bytes.ReplaceAll(document(), []byte("registry.example/app@sha256:"+imageHash), []byte(image))
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
