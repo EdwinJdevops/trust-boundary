@@ -91,9 +91,18 @@ The executor matches those digests against the signed intent and independent
 artifact measurement. It rejects reuse of the release signer's key as a
 validator key. Deployments for another source or artifact require a new policy.
 
-The portable runner records the digest of its verifier executable. Deployment
-attestations must instead cover the actual release artifact. The integration
-fixture models that binding using temporary keys and synthetic check receipts.
+The default portable run records its verifier executable as the subject. To
+validate an OCI release candidate, pass its immutable image reference as the
+third argument to `scripts/verify-commit.sh`. Use an explicit public registry
+that serves manifests over HTTPS without credentials. The image must run under
+the restricted workload profile. The fixture requires the reported image ID to
+match the exact reference, so use a platform manifest when the runtime reports
+a platform digest for a multi-platform index.
+
+The release run stores the measured registry response as `release-manifest.json`.
+Use that file for `--artifact` when inspecting or signing its statement. The
+verifier binary is retained for build comparison. The Kubernetes test uses
+temporary authorization keys and synthetic in-cluster validator receipts.
 Independent validator enrollment, signing operations and release provenance
 remain production gates. Separate keys establish cryptographic separation.
 Operational independence requires separate control over those keys and runners.

@@ -4,7 +4,7 @@
 set -euo pipefail
 umask 077
 [[ $(id -u) == 0 && $(uname -s) == Linux && $(uname -m) == x86_64 ]] || { echo 'Linux amd64 root supervisor required for the separate-UID cluster test'; exit 1; }
-[[ $# == 2 && $1 =~ ^[a-f0-9]{40}$ ]] || { echo 'usage: verify-commit.sh FULL_COMMIT NEW_OUTPUT_DIRECTORY'; exit 1; }
+[[ ( $# == 2 || $# == 3 ) && $1 =~ ^[a-f0-9]{40}$ ]] || { echo 'usage: verify-commit.sh FULL_COMMIT NEW_OUTPUT_DIRECTORY [PINNED_PUBLIC_IMAGE]'; exit 1; }
 expected=$1
 output=$2
 repo=$(cd "$(dirname "$0")/.." && pwd)
@@ -87,6 +87,12 @@ check build worker timeout 600 bash -euo pipefail -c '"$1" build ./...; "$1" bui
 # The source archive is read-only to the worker; only its private build/cache
 # directory is writable. No GitHub, cluster or signing credentials are supplied.
 cp "$work/worker/tbverify" "$output/tbverify"
+subject="$output/tbverify"
+integration_args=()
+if [[ $# == 3 ]]; then
+  subject="$output/release-manifest.json"
+  integration_args=("$3" "$subject")
+fi
 check vet worker timeout 600 "$go_bin" vet ./...
 check race worker timeout 600 "$go_bin" test -race -count=1 -coverprofile="$work/worker/coverage.out" ./...
 check integration-compile worker timeout 600 "$go_bin" test -c -tags integration -o "$work/worker/integration.test" ./kubeexecutor
@@ -96,7 +102,7 @@ check archive-integrity worker timeout 120 bash -euo pipefail -c 'sed "s#history
 check kubernetes timeout 1200 env -i PATH="$work:$safe_path" HOME="$work/supervisor" \
   GOCACHE="$work/supervisor/cache" GOMODCACHE="$work/supervisor/modules" GOPATH="$work/supervisor/gopath" \
   GOENV=off GOTOOLCHAIN=local GOWORK=off GOPROXY=off GOSUMDB=off \
-  bash "$work/source/scripts/integration.sh"
+  bash "$work/source/scripts/integration.sh" "${integration_args[@]}"
 cp "$work/worker/coverage.out" "$output/coverage.out"
 # Use a supervisor-built recorder from the reviewed source, not an executable
 # potentially modified by worker tests. No private key is present in this stage.
@@ -106,10 +112,10 @@ timeout 600 env -i PATH="$safe_path" HOME="$work/supervisor" GOCACHE="$work/supe
 [[ $(sha256sum "$work/recorder" | cut -d' ' -f1) == $(sha256sum "$output/tbverify" | cut -d' ' -f1) ]] || { echo 'worker artifact differs from supervisor rebuild'; exit 1; }
 finished=$(date +%s)
 timeout 120 "$work/recorder" record --commit "$expected" --source "$output/source.tar" \
-  --artifact "$output/tbverify" --suite "$output/suite.sha256" --logs "$output/logs" \
+  --artifact "$subject" --suite "$output/suite.sha256" --logs "$output/logs" \
   --go-version "$goversion" --started-at "$started" --finished-at "$finished" \
   "${statuses[@]}" > "$output/statement.json"
 timeout 120 "$work/recorder" inspect --statement "$output/statement.json" --logs "$output/logs" \
-  --source "$output/source.tar" --artifact "$output/tbverify" --suite "$output/suite.sha256" > "$output/integrity.json"
+  --source "$output/source.tar" --artifact "$subject" --suite "$output/suite.sha256" > "$output/integrity.json"
 printf '{"status":"passed","authentication":"not-verified","commit":"%s"}\n' "$expected" > "$output/outcome.json"
 echo 'PASS: complete commit-bound local validation; evidence is unsigned and not independently authenticated'
