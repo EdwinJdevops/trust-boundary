@@ -41,3 +41,4 @@ jobs:
         run: |
           bash -n scripts/integration.sh
           bash -n scripts/verify-commit.sh
+          bash -n scripts/build-reference-workload.sh
