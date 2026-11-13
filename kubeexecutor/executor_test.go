@@ -30,12 +30,17 @@ func document() []byte {
 }
 func signed(t *testing.T, doc []byte) (gate.Envelope, ed25519.PublicKey) {
 	t.Helper()
+	return signedWithNonce(t, doc, strings.Repeat("c", 32))
+}
+
+func signedWithNonce(t *testing.T, doc []byte, nonce string) (gate.Envelope, ed25519.PublicKey) {
+	t.Helper()
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 	hash := sha256.Sum256(doc)
-	e, err := gate.Sign(gate.Intent{ArtifactSHA256: imageHash, SourceSHA256: strings.Repeat("b", 64), ManifestSHA256: hex.EncodeToString(hash[:]), Workload: "worker", Environment: "staging", Operation: "deploy", Issuer: "ci", Nonce: strings.Repeat("c", 32), ExpiresAt: time.Now().Add(time.Minute).Unix()}, priv)
+	e, err := gate.Sign(gate.Intent{ArtifactSHA256: imageHash, SourceSHA256: strings.Repeat("b", 64), ManifestSHA256: hex.EncodeToString(hash[:]), Workload: "worker", Environment: "staging", Operation: "deploy", Issuer: "ci", Nonce: nonce, ExpiresAt: time.Now().Add(time.Minute).Unix()}, priv)
 	if err != nil {
 		t.Fatal(err)
 	}

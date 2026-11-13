@@ -94,6 +94,53 @@ func TestReleaseSignerCannotValidateItsOwnRelease(t *testing.T) {
 	}
 }
 
+func TestRestoreWithNewReleaseKeyRejectsPreRestoreGrant(t *testing.T) {
+	doc := document()
+	oldGrant, oldKey := signed(t, doc)
+	newGrant, newKey := signedWithNonce(t, doc, strings.Repeat("d", 32))
+	var posts atomic.Int32
+	s := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			posts.Add(1)
+			w.WriteHeader(http.StatusCreated)
+		}
+		_, _ = w.Write(observed(doc))
+	}))
+	defer s.Close()
+	c := config(t, s, oldKey)
+	before, err := New(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = before.Execute(context.Background(), oldGrant, doc, imageHash); err != nil {
+		t.Fatal(err)
+	}
+	// An earlier snapshot lacks the nonce written by the successful create.
+	c.JournalDir = t.TempDir()
+	if err := os.Chmod(c.JournalDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	c.PublicKey = newKey
+	after, err := New(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = after.Execute(context.Background(), oldGrant, doc, imageHash); err == nil || posts.Load() != 1 {
+		t.Fatalf("old grant reached create after restore: posts=%d err=%v", posts.Load(), err)
+	}
+	if _, err = os.Stat(filepath.Join(c.JournalDir, oldGrant.Intent.Nonce)); !os.IsNotExist(err) {
+		t.Fatalf("rejected grant touched restored journal: %v", err)
+	}
+	// Recovery against the restored journal has no record to reconcile.
+	if _, err = after.Recover(context.Background(), oldGrant.Intent.Nonce); !os.IsNotExist(err) {
+		t.Fatalf("expected missing record, got %v", err)
+	}
+	// Exercise fresh authorization on the TLS fixture after the cutover.
+	if _, err = after.Execute(context.Background(), newGrant, doc, imageHash); err != nil || posts.Load() != 2 {
+		t.Fatalf("fresh grant failed after cutover: posts=%d err=%v", posts.Load(), err)
+	}
+}
+
 func TestValidatorReplacementRejectsRetiredSignature(t *testing.T) {
 	doc := document()
 	env, pub := signed(t, doc)

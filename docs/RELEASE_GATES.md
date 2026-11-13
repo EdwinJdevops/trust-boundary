@@ -43,6 +43,16 @@ required signed evidence and must not be silently migrated. Restore-from-backup
 must not roll back consumed nonces; a safe distributed restoration protocol remains
 unfinished. These limitations prevent approval for production infrastructure.
 
+If a restore may predate a consumed grant, stop all executors before restoring.
+Keep deployment paused while reconciling affected operations against cluster
+state and available journal evidence. Before resuming, retire the old release
+signing key and construct every executor with a new release public key. Issue
+fresh grants only after reconciliation. Keep old records for investigation.
+Historical records signed by the retired key require a separate read-only
+reconciliation procedure. The regression test models a missing nonce and
+verifies that a replacement executor rejects the old signature. Target storage
+failure and restore drills remain required.
+
 ## Publication
 
 The owner has authorized public visibility if needed. Before publication, inspect
