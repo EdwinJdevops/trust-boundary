@@ -97,7 +97,7 @@ func TestReleaseSignerCannotValidateItsOwnRelease(t *testing.T) {
 func TestRestoreWithNewReleaseKeyRejectsPreRestoreGrant(t *testing.T) {
 	doc := document()
 	oldGrant, oldKey := signed(t, doc)
-	newGrant, newKey := signed(t, doc)
+	newGrant, newKey := signedWithNonce(t, doc, strings.Repeat("d", 32))
 	var posts atomic.Int32
 	s := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
