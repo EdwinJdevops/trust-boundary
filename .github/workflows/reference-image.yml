@@ -1,0 +1,62 @@
+name: Publish attested reference image
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main' && github.repository == 'EdwinJdevops/trust-boundary'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      IMAGE: ghcr.io/edwinjdevops/trust-boundary-reference
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.26.8'
+          cache: false
+      - name: Build and smoke test
+        run: |
+          set -euo pipefail
+          context=$(mktemp -d)
+          trap 'rm -rf -- "$context"' EXIT
+          cp deploy/reference-workload/Dockerfile "$context/"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v1 GOENV=off GOTOOLCHAIN=local GOWORK=off GOPROXY=off GOSUMDB=off \
+            go build -trimpath -buildvcs=false -o "$context/tbworkload" ./cmd/tbworkload
+          docker build --platform linux/amd64 --network none \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "$IMAGE:$GITHUB_SHA" "$context"
+          container=$(docker create --read-only --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1::8080 "$IMAGE:$GITHUB_SHA")
+          trap 'docker rm -f "$container" >/dev/null; rm -rf -- "$context"' EXIT
+          docker start "$container"
+          endpoint=$(docker port "$container" 8080/tcp)
+          test "$(docker inspect --format '{{.Config.User}}' "$container")" = '65532:65532'
+          test "$(curl -fsS --retry 5 --retry-connrefused --max-time 3 "http://$endpoint/healthz")" = ok
+      - name: Push tested image
+        id: push
+        env:
+          PACKAGE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          export DOCKER_CONFIG=$(mktemp -d)
+          trap 'rm -rf -- "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$PACKAGE_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:$GITHUB_SHA"
+          ref=$(docker image inspect "$IMAGE:$GITHUB_SHA" | jq -er --arg prefix "$IMAGE@" '.[0].RepoDigests | map(select(startswith($prefix))) | if length == 1 then .[0] else error("expected one registry digest") end')
+          digest=${ref##*@}
+          [[ $digest =~ ^sha256:[a-f0-9]{64}$ ]]
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+          printf 'Image `%s` from `%s`\n' "$ref" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-name: ghcr.io/edwinjdevops/trust-boundary-reference
+          subject-digest: ${{ steps.push.outputs.digest }}
