@@ -96,13 +96,20 @@ echo 'PASS: actual executor token cannot bypass cluster workload-shape policy'
 # Measure exact OCI registry manifest/index response bytes; this is integrity,
 # not a publisher signature or build provenance assertion.
 manifest_url=https://registry.k8s.io/v2/pause/manifests/3.10.1
+manifest_auth=()
 if [[ -n $image ]]; then
   repository=${image%@*}
   manifest_url="https://${repository%%/*}/v2/${repository#*/}/manifests/${image##*@}"
+  if [[ ${repository%%/*} == ghcr.io ]]; then
+    token=$(curl --disable --proto '=https' --connect-timeout 15 --max-time 30 --max-filesize 65536 -fsS \
+      --get --data-urlencode 'service=ghcr.io' --data-urlencode "scope=repository:${repository#*/}:pull" \
+      https://ghcr.io/token | jq -er '.token | select(type == "string" and test("^[A-Za-z0-9._+/=-]+$"))')
+    manifest_auth=(-H "Authorization: Bearer $token")
+  fi
 fi
 curl --disable --proto '=https' --proto-redir '=https' --max-filesize 4194304 \
   --connect-timeout 15 --max-time 120 --retry 2 -fsSL -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
-  "$manifest_url" -o "$run/artifact.json"
+  "${manifest_auth[@]}" "$manifest_url" -o "$run/artifact.json"
 measured=$(sha256sum "$run/artifact.json" | cut -d' ' -f1)
 if [[ -n $image ]]; then
   [[ ${image##*@} == "sha256:$measured" ]] || { echo 'registry response differs from pinned digest'; exit 1; }
